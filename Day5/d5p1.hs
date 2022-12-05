@@ -1,10 +1,9 @@
 import System.IO
 import Data.List.Split
-import Data.List
+import Data.Map.Strict (Map, empty, unionWith, insert)
 import Data.Char
 import Data.Foldable
 import Debug.Trace
-import Control.Applicative
 
 main = do
   handle <- openFile "input.txt" ReadMode
@@ -12,8 +11,9 @@ main = do
   print . solveProblem $ contents
   hClose handle
 
-type Stack t = [t]
 type Crate = Char
+type Stack = [Crate]
+type StackMap = Map Int Stack
 
 solveProblem :: String -> String
 solveProblem s = 
@@ -23,60 +23,29 @@ solveProblem s =
     instructions = parseInstructions instructionpart
   in doInstructions stacks instructions
 
--- My Parser
-newtype Parser a = Parser { parse :: String -> Maybe(a,String)}
+parseInstructions s = s
+doInstructions m s = s
 
-charP :: Char -> Parser Char
-charP c = Parser parse_c
+parseStacks :: String -> StackMap
+parseStacks s = 
+  let
+    ls = lines s
+    listsToProcess = map (toCrate . mergeDuplicateSplits . splitOn " ") $ init ls
+  in foldr (unionWith (++)) empty (map buildStacks (init ls))
+
+mergeDuplicateSplits :: [String] -> [String] -- Empty Columns correspond to 4 "" strings, we merge these
+mergeDuplicateSplits = foldr combine (0,[])
   where
-    parse_c [] = Nothing
-    parse_c (x:s)
-      | x == c = Just (c,s)
-      | x /= c = Nothing
+    combine "" (3,xs) = (0,"":xs)
+    combine "" (n,xs) = (n+1,xs)
+    combine s (n,xs) = (0,xs)
 
-stringP :: String -> Parser String
-stringP = mapM charP
+toCrate :: [String] -> Maybe Crate
+toCrate = map $ parse crateP
 
-spaceP :: Parser Char
-spaceP = charP ' ' <|> charP '\n' <|> charP '\t' <|> charP '\r'
-
-skipSpace :: Parser String
-skipSpace = many spaceP
-
-alphaP :: Parser Char
-alphaP = asum [charP c | c <- ['A'..'Z']++['a'..'z']]
-
-crateP :: Parser Crate
-crateP = do
-  _ <- charP '['
-  c <- alphaP
-  _ <- charP ']'
-  return c
-
--- Type class Instances
-instance Functor Parser where
-  fmap f (Parser p) = Parser $ \s -> do
-    (x,s') <- p s
-    return (f x, s')
-
-instance Applicative Parser where
-  pure x = Parser $ \s -> Just (x,s)
-  Parser f <*> Parser p = Parser $ \s -> do
-    (f', s1) <- f s
-    (x, s2) <- p s1
-    return (f' x, s2)
-
-instance Monad Parser where
-  Parser p >>= f = Parser $ \s -> do
-    (x, s1) <- p s
-    parse (f x) s1
-
-instance MonadFail Parser where
-  fail _ = Parser $ const Nothing
-
-instance Alternative Parser where
-  empty = fail ""
-  Parser p <|> Parser q = Parser $ \s ->
-    case p s of
-      Nothing -> q s
-      Just x  -> Just x
+buildStacks :: [Maybe Crate] -> StackMap
+buildStacks ls = fst $ foldr go (empty, 0) ls
+  where
+    go :: Maybe Crate -> (StackMap, Int) -> (StackMap, Int)
+    go Nothing  (m,k) = (m, k+1)
+    go (Just x) (m,k) = (insert k [x] m, k+1)
