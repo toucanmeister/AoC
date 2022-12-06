@@ -3,7 +3,7 @@ import System.IO
 main = do
   handle <- openFile "input.txt" ReadMode
   contents <- hGetContents handle
-  putStrLn . show . solveProblem $ contents
+  print . solveProblem $ contents
   hClose handle
 
 solveProblem :: String -> Int

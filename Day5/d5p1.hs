@@ -1,8 +1,9 @@
 import System.IO
 import Data.List.Split
-import Data.Map.Strict (Map, empty, unionWith, insert)
+import Data.Map.Strict qualified as M (Map, empty, unionWith, insert, lookup, adjust, toAscList)
 import Data.Char
-import Data.Foldable
+import Data.Maybe (fromJust)
+import Data.Foldable 
 import Debug.Trace
 
 main = do
@@ -13,39 +14,72 @@ main = do
 
 type Crate = Char
 type Stack = [Crate]
-type StackMap = Map Int Stack
+type StackMap = M.Map Int Stack
+type Instruction = StackMap -> StackMap
 
 solveProblem :: String -> String
 solveProblem s = 
   let
-    [initpart, instructionpart] = splitOn "\n\n" s
+    [initpart, instructionpart] = splitOn "\r\n\r\n" s
     stacks = parseStacks initpart
     instructions = parseInstructions instructionpart
-  in doInstructions stacks instructions
+    finalStack = doInstructions instructions stacks
+  in show . getTopCrates $ finalStack
 
-parseInstructions s = s
-doInstructions m s = s
 
+doInstructions :: [Instruction] -> StackMap -> StackMap
+doInstructions = foldr (.) id . reverse
+
+getTopCrates :: StackMap -> [Crate]
+getTopCrates = map (head . snd) . M.toAscList
+
+-- Parsing Instructions
+parseInstructions :: String -> [Instruction]
+parseInstructions = map (toInstruction . toTuple) . lines
+
+toTuple :: String -> (Int,Int,Int)
+toTuple s = 
+  let ws = words s
+  in (read $ ws!!1, read $ ws!!3, read $ ws!!5)
+
+toInstruction :: (Int,Int,Int) -> Instruction
+toInstruction (n, from, to) = foldr (.) id r
+  where r = replicate n $ atomInstruction from to
+
+atomInstruction :: Int -> Int -> StackMap -> StackMap
+atomInstruction from to m = 
+  let 
+    c = head . fromJust $ M.lookup from m
+    inserted = M.adjust (c:) to m
+  in M.adjust tail from inserted
+
+-- Parsing Stacks
 parseStacks :: String -> StackMap
 parseStacks s = 
-  let
-    ls = lines s
-    listsToProcess = map (toCrate . mergeDuplicateSplits . splitOn " ") $ init ls
-  in foldr (unionWith (++)) empty (map buildStacks (init ls))
+  let 
+    lists = map (toCrates . map removeTrailingSpace . mergeDuplicateSplits . splitOn " ") . init . lines $ s
+    stacks = map buildStacks lists
+  in foldr (M.unionWith (++)) M.empty stacks
+
+removeTrailingSpace :: String -> String
+removeTrailingSpace = reverse . dropWhile isSpace . reverse
 
 mergeDuplicateSplits :: [String] -> [String] -- Empty Columns correspond to 4 "" strings, we merge these
-mergeDuplicateSplits = foldr combine (0,[])
+mergeDuplicateSplits = snd . foldr combine (0,[])
   where
     combine "" (3,xs) = (0,"":xs)
     combine "" (n,xs) = (n+1,xs)
-    combine s (n,xs) = (0,xs)
+    combine s (n,xs) = (0,s:xs)
 
-toCrate :: [String] -> Maybe Crate
-toCrate = map $ parse crateP
+toCrates :: [String] -> [Maybe Crate]
+toCrates = map toCrate
+  where
+    toCrate ('[':x:"]") = Just x
+    toCrate _ = Nothing
 
 buildStacks :: [Maybe Crate] -> StackMap
-buildStacks ls = fst $ foldr go (empty, 0) ls
+buildStacks = fst . foldl' go (M.empty, 1)
   where
-    go :: Maybe Crate -> (StackMap, Int) -> (StackMap, Int)
-    go Nothing  (m,k) = (m, k+1)
-    go (Just x) (m,k) = (insert k [x] m, k+1)
+    go :: (StackMap, Int) -> Maybe Crate -> (StackMap, Int)
+    go (m,k) Nothing  = (m, k+1)
+    go (m,k) (Just x) = (M.insert k [x] m, k+1)

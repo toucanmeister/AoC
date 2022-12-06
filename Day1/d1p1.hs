@@ -5,7 +5,7 @@ import System.IO
 main = do
     handle <- openFile "data.txt" ReadMode
     contents <- hGetContents handle
-    putStrLn . show . solveProblem $ contents
+    print . solveProblem $ contents
     hClose handle
 
 solveProblem :: String -> Int
