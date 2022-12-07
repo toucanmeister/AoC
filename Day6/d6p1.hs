@@ -10,6 +10,7 @@ main = do
   hClose handle
 
 
+
 mytrace x = traceShow x x
 
 solveProblem :: String -> String
