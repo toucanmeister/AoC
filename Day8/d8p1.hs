@@ -1,6 +1,6 @@
 import System.IO
 import Data.List
-import Data.List.Split
+import Data.List.Split ()
 import Data.Char
 import Debug.Trace
 import Data.Array

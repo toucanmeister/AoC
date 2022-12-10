@@ -16,7 +16,7 @@ main = do
 solveProblem :: String -> String
 solveProblem s = 
   let arr = listArray ((1,1),(99,99)) . map digitToInt . filter (not . isSpace) $ s 
-  in show . maximum . mytrace . map (scenicScore arr) . indices $ arr
+  in show . maximum . map (scenicScore arr) . indices $ arr
 
 scenicScore :: Array (Int, Int) Int -> (Int, Int) -> Int
 scenicScore arr idx@(x,y)
