@@ -19,8 +19,13 @@ type Path = [String]
 type PathMap = Map.Map Path Node
 
 solveProblem :: String -> String
-solveProblem s = show . sum .  filter (<= 100000) . map getSize . filter isDir . Map.elems $ pathmap
-  where pathmap = snd .  foldl' buildMap ([],Map.empty) . lines $ s
+solveProblem s = show . minimum . filter (>= requiredsize) $ sizes
+  where
+    requiredsize = 30000000 - freespace
+    freespace = 70000000 - maximum sizes
+    sizes = map getSize . filter isDir . Map.elems $ pathmap
+    pathmap = snd .  foldl' buildMap (["/"],start) . lines $ s
+    start = Map.insert ["/"] (Dir 0) Map.empty
 
 getSize :: Node -> Int
 getSize (Dir n) = n
