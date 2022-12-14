@@ -18,29 +18,36 @@ main = do
 type Coord = (Int,Int)
 type Heightmap = Array Coord Char
 type Visitedmap = Array Coord Bool
+type Distancemap = Array Coord Int
 type Path = [Coord]
 
 solveProblem :: String -> String
-solveProblem s = show $ shortestPath heights emptyVisitedMap start
+solveProblem s = show $ shortestPath heights start
   where
-    emptyVisitedMap = array (bounds heights) [((i,j), False) | i <- [xlow..xhigh], j <- [ylow..yhigh]] -- Array to keep track of where we've visited
-    ((xlow, ylow), (xhigh, yhigh)) = bounds heights
     start = findStart heights
     heights = toArray s
 
 chardiff :: Char -> Char -> Int
 chardiff a b = ord a - ord b
 
-shortestPath :: Heightmap -> Visitedmap -> Coord -> (Path, Int)
-shortestPath heights visited pos 
-  | heights!pos == 'E' = ([], 0)
-  | null $ possibleDirections heights visited pos = ([], 1000000)
-  | otherwise = (pos:minpath, min_n+1)
+shortestPath :: Heightmap -> Coord -> (Path,Distancemap)
+shortestPath heights start = 
+  let
+    visits = array (bounds heights) [((i,j), False) | i <- [xlow..xhigh], j <- [ylow..yhigh]] -- Array to keep track of where we've visited
+    distances = array (bounds heights) [((i,j), 1000000) | i <- [xlow..xhigh], j <- [ylow..yhigh]] -- Array to keep track of distances to the goal we've computed
+    ((xlow, ylow), (xhigh, yhigh)) = bounds heights
+  in bfs [start] heights visits distances
+
+bfs :: [Coord] -> Heightmap -> Visitedmap -> Distancemap -> Path
+bfs [] heights visits distances = ([],distances)
+bfs (pos:queue) heights visits distances
+  | heights!pos == 'E' = ([],distances//[(pos,0)])
+  | otherwise = (pos:path, newdistances)
     where
-      (minpath, min_n) = minimumBy comparepathlengths paths
-      comparepathlengths x y = compare (snd x) (snd y)
-      paths = map (shortestPath heights updatedVisits) $ possibleDirections heights visited pos
-      updatedVisits = trace (showArray visited) visited//[(position,True) | position <- possibleDirections heights visited pos]
+      (path, _) = bfs newqueue heights newvisits newdistances
+      newqueue = queue ++ possibleDirections heights visits pos
+      newvisits = visits//[(pos,True)]
+      newdistances = distances//[(pos, distances!pos + 1)]
 
 possibleDirections :: Heightmap -> Visitedmap -> Coord -> [Coord]
 possibleDirections heights visited (x,y) = filter isPossible [(x-1,y), (x+1,y), (x,y-1), (x,y+1)]
