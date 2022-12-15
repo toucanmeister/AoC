@@ -22,10 +22,11 @@ type Distancemap = Array Coord Int
 type Path = [Coord]
 
 solveProblem :: String -> String
-solveProblem s = show $ shortestPath heights start!goal
+solveProblem s = show $ distances
   where
+    distances = map ((! goal) . shortestPath heights) starts
+    starts = findAllInArr heights 'a'
     goal = findInArr heights 'E'
-    start = findInArr heights 'S'
     heights = toArray s
 
 chardiff :: Char -> Char -> Int
@@ -56,7 +57,8 @@ possibleDirections :: Heightmap -> Visitedmap -> Coord -> [Coord]
 possibleDirections heights visited (x,y) = filter isPossible [(x-1,y), (x+1,y), (x,y-1), (x,y+1)]
   where
     isPossible pos
-      | isInBounds heights pos && not (visited!pos) && (heights!(x,y)) == 'S' = True
+      | isInBounds heights pos && not (visited!pos) && (heights!(x,y)) == 'S' = heights!pos `chardiff` 'a' <= 1
+      | isInBounds heights pos && not (visited!pos) && (heights!pos) == 'S' = 'a' `chardiff` (heights!(x,y)) <= 1
       | isInBounds heights pos && not (visited!pos) = if (heights!pos) /= 'E' then (heights!pos) `chardiff` (heights!(x,y)) <= 1 else 'z' `chardiff` (heights!(x,y)) <= 1
       | otherwise = False
 
@@ -67,6 +69,9 @@ isInBounds heights (x,y) = x >= xlow && x <= xhigh && y >= ylow && y <= yhigh
 
 findInArr :: Heightmap -> Char -> Coord
 findInArr height c = fst . head . filter ((==c) . snd) . assocs $ height
+
+findAllInArr :: Heightmap -> Char -> [Coord]
+findAllInArr height c = map fst . filter ((==c) . snd) . assocs $ height
 
 toArray :: String -> Heightmap
 toArray s = listArray ((0,0),(bound_x,bound_y)) . filter (not . isSpace) $ s
