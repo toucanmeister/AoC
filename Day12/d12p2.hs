@@ -22,7 +22,7 @@ type Distancemap = Array Coord Int
 type Path = [Coord]
 
 solveProblem :: String -> String
-solveProblem s = show $ distances
+solveProblem s = show . minimum . filter (>0) $ distances
   where
     distances = map ((! goal) . shortestPath heights) starts
     starts = findAllInArr heights 'a'

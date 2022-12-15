@@ -1,19 +1,17 @@
 import System.IO
 import Data.List
 import Data.List.Split
-import Data.Char
 import Debug.Trace ( traceShow , trace )
 import Data.Either
-import Data.Maybe
-import Data.Array
 import qualified Text.Parsec as P
 import qualified Text.Parsec.String as P
-import qualified Text.Parsec.Char as P
+import Data.Maybe
 
 mytrace x = traceShow x x
 
 myparse p = P.parse p "" 
 
+main:: IO ()
 main = do
   handle <- openFile "input.txt" ReadMode
   contents <- hGetContents handle
@@ -24,25 +22,30 @@ data Packet = L Int | R [Packet]
   deriving (Show, Eq)
 
 instance Ord Packet where
+  compare :: Packet -> Packet -> Ordering
   compare (L a) (L b)
-    | a < b = LT
-    | a > b = GT
-    | a== b = EQ
+    | a < b  = LT
+    | a > b  = GT
+    | a == b = EQ
   compare (R (x:xs)) (R (y:ys))
-    | x < y  = LT
-    | x > y  = GT
-    | x == y = compare (R xs) (R ys)
-  compare (R []) (R (_:ys)) = LT
-  compare (R (x:xs)) (R []) = GT
-  compare (R []) (R [])     = EQ
-  compare (L a) (R lst)  = compare (R [L a]) (R lst)
-  compare (R lst) (L b)  = compare (R lst) (R [L b])
+    | x < y     = LT
+    | x > y     = GT
+    | otherwise = compare (R xs) (R ys)
+  compare (R []) (R (_:_)) = LT
+  compare (R (_:_)) (R []) = GT
+  compare (R []) (R [])    = EQ
+  compare (L a) (R lst) = compare (R [L a]) (R lst)
+  compare (R lst) (L b) = compare (R lst) (R [L b])
 
 solveProblem :: String -> String
-solveProblem s = show . sum . map (+1) . findIndices (uncurry (<=)) $ packetpairs
+solveProblem s = show $ divider1_index * divider2_index
   where
-    packetpairs = map (\x -> (head x, x!!1)) packetlists
-    packetlists = map (rights . map (myparse packetP)) packetpairstrings
+    divider1_index = (1+) $ fromJust $ divider1 `elemIndex` sortedpackets
+    divider2_index = (1+) $ fromJust $ divider2 `elemIndex` sortedpackets
+    sortedpackets = sort $ divider1 : divider2 : packets
+    divider1 = R [R [L 2]]
+    divider2 = R [R [L 6]]
+    packets = concatMap (rights . map (myparse packetP)) packetpairstrings
     packetpairstrings = map lines $ splitOn "\n\n" s
 
 packetP :: P.GenParser Char st Packet
