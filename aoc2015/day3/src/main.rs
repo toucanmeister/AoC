@@ -1,6 +1,8 @@
 use std::fs;
 
 type Point = (i32, i32);
+
+#[derive(Clone)]
 enum Direction {
     Up,
     Down,
@@ -29,8 +31,7 @@ fn parse_directions(input: &String) -> Vec<Direction> {
     input.chars().map(to_direction).collect()
 }
 
-fn part1(input: &String) -> String {
-    let directions = parse_directions(input);
+fn get_visited(directions: Vec<Direction>) -> Vec<Point> {
     let mut current: Point = (0,0);
     let mut visited: Vec<Point> = Vec::from([(0,0)]);
     for direction in directions.iter() {
@@ -39,11 +40,25 @@ fn part1(input: &String) -> String {
             visited.push(current.clone());
         }
     }
+    visited
+}
+
+fn part1(input: &String) -> String {
+    let directions = parse_directions(input);
+    let visited = get_visited(directions);
     visited.len().to_string()
 }
 
 fn part2(input: &String) -> String {
-    String::from("hi")
+    let directions = parse_directions(input);
+    let santa_directions: Vec<Direction> = directions.clone().into_iter().step_by(2).collect();
+    let robo_directions: Vec<Direction> = directions[1..].to_vec().into_iter().step_by(2).collect();
+    let visited1: Vec<Point> = get_visited(santa_directions);
+    let visited2: Vec<Point> = get_visited(robo_directions);
+    let mut visited = [visited1, visited2].concat();
+    visited.sort();
+    visited.dedup();
+    visited.len().to_string()
 }
 
 
